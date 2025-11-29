@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# Model files (do NOT push)
+web_app/model/
+*.h5
+*.tflite
+*.pb
+
+# Dataset
+mtrain/
+mtrain.zip
+
+# Generated images
+web_app/ident/
+web_app/user_report/
+
+# TensorFlow 巨型檔案避免被意外加入
+*.pyd
+*.dll
