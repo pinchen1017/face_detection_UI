@@ -175,15 +175,24 @@
                             
                             // 檢查是否有結果
                             if (!data.results || data.results.length === 0) {
-                                resultText.innerHTML = '<span class="error-text">未找到匹配的人物</span>';
+                                resultText.innerHTML = '<span class="error-text">也許他還沒有在立法院出名 (◍ˊㅿˋ◍) </span>';
                                 resultCard.classList.remove('analyzing');
                                 return;
                             }
                             
                             let top1 = data.results[0];
+                            let confidencePercent = top1.prob * 100;
+                            
+                            // 如果最高分數低於 65%，顯示提示訊息
+                            if (confidencePercent < 65) {
+                                resultText.innerHTML = '<span class="error-text">也許他還沒有在立法院出名 (◍ˊㅿˋ◍) </span>';
+                                resultCard.classList.remove('analyzing');
+                                return;
+                            }
+                            
                             resultText.innerHTML = `
                                 <span class="character-name">${top1.label}</span>
-                                <span class="confidence-score">${(top1.prob * 100).toFixed(1)}%</span>
+                                <span class="confidence-score">${confidencePercent.toFixed(1)}%</span>
                             `;
                             resultCard.classList.remove('analyzing');
                             resultCard.classList.add('analyzed');
