@@ -4,28 +4,53 @@
 # VSCode
 .vscode/
 
-# Python
+# Python bytecode
 __pycache__/
 *.pyc
 
-# Virtual environments
+# Virtual environments (不要 push)
 .venv/
 venv/
 
-# Model files (do NOT push)
+# -------------------------
+# 深度學習相關大型模型檔案（不要推上 GitHub）
+# -------------------------
 web_app/model/
 *.h5
 *.tflite
 *.pb
+*.pth
+*.onnx
 
-# Dataset
+# TensorFlow / JAX / PyTorch 巨大 DLL/PYD
+*.pyd
+*.dll
+
+# -------------------------
+# 人臉辨識資料庫與結果檔案
+# -------------------------
+web_app/face_db.sqlite
+web_app/result/
+Machine-Learning---Face-Recognition/result/
+Machine-Learning---Face-Recognition/face_db.sqlite
+
+# -------------------------
+# 影像資料與訓練資料（非常大）
+# -------------------------
 mtrain/
 mtrain.zip
-
-# Generated images
+images/
+report_imgs/
+Machine-Learning---Face-Recognition/images/
 web_app/ident/
 web_app/user_report/
 
-# TensorFlow 巨型檔案避免被意外加入
-*.pyd
-*.dll
+# -------------------------
+# Node / 前端
+# -------------------------
+node_modules/
+
+# -------------------------
+# Log
+# -------------------------
+*.log

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>動漫角色識別 | Anime Face Recognition</title>
+    <title>政治人物識別 | Political Face Recognition</title>
     <link href="/static/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <link href="/static/css/user.css" rel="stylesheet" type="text/css" />
     <script src="/static/js/jquery.min.js"></script>
@@ -20,8 +20,8 @@
     <div class="main-container">
         <!-- 標題區域 -->
         <header class="header-section">
-            <h1 class="main-title">動漫角色識別</h1>
-            <p class="subtitle">上傳動漫角色圖片，即可識別出角色名稱</p>
+            <h1 class="main-title">政治人物識別</h1>
+            <p class="subtitle">上傳包含政治人物的圖片，即可識別出人物名稱</p>
             <div class="status-indicator" id="status">
                 <span class="status-dot"></span>
                 <span class="status-text">正在初始化 OpenCV……</span>
@@ -83,7 +83,7 @@
             <div class="results-container" id="mylist">
                 <div class="results-placeholder">
                     <p class="placeholder-text">上傳圖片後，結果將顯示在這裡</p>
-                    <p class="placeholder-hint">點擊角色名稱查看詳細資訊</p>
+                    <p class="placeholder-hint">點擊人物名稱查看詳細資訊</p>
                 </div>
             </div>
         </section>
@@ -158,11 +158,28 @@
                     continue;
                 }
                 
+                // 壓縮圖片以減少上傳大小（使用 JPEG 格式，質量 0.85）
+                // 真實人臉圖片通常較大，壓縮可以減少 413 錯誤
+                let imageData = upload_list[i].toDataURL('image/jpeg', 0.85);
                 $.post("/uploadForIdent", {
-                    data: upload_list[i].toDataURL('image/png')
+                    data: imageData
                 }, (data, status) => {
                     if (status == "success") {
                         try {
+                            // 檢查是否有錯誤訊息
+                            if (data.error) {
+                                resultText.innerHTML = `<span class="error-text">${data.error}</span>`;
+                                resultCard.classList.remove('analyzing');
+                                return;
+                            }
+                            
+                            // 檢查是否有結果
+                            if (!data.results || data.results.length === 0) {
+                                resultText.innerHTML = '<span class="error-text">未找到匹配的人物</span>';
+                                resultCard.classList.remove('analyzing');
+                                return;
+                            }
+                            
                             let top1 = data.results[0];
                             resultText.innerHTML = `
                                 <span class="character-name">${top1.label}</span>
@@ -233,8 +250,8 @@
         tryIt.addEventListener('click', facedet);
 
         utils.loadOpenCv(() => {
-            let faceCascadeFile = '/static/data/lbpcascade_animeface.xml';
-            let faceCascadePath = 'lbpcascade_animeface.xml';
+            let faceCascadeFile = '/static/data/haarcascade_frontalface_default.xml';
+            let faceCascadePath = 'haarcascade_frontalface_default.xml';
             utils.createFileFromUrl(faceCascadePath, faceCascadeFile, () => {
                 tryIt.removeAttribute('disabled');
                 statusText.querySelector('.status-text').innerText = "OpenCV 初始化完成，可以開始識別了！";
