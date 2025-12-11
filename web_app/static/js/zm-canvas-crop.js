@@ -307,6 +307,10 @@ ZmCanvasCrop.prototype = {
 					var left = mouseX - relativeOffset.x;
 					var top = mouseY - relativeOffset.y;
 					
+					// 限制在图片范围内
+					left = Math.max(0, Math.min(left, self._img_show.width - self._img_show.crop_width));
+					top = Math.max(0, Math.min(top, self._img_show.height - self._img_show.crop_height));
+					
 					return { left: left, top: top };
 				}
 			});
@@ -381,13 +385,26 @@ ZmCanvasCrop.prototype = {
 				var newLeft = noChangeX >= 0 ? noChangeX : (Math.abs(noChangeX) - self._img_show.crop_width);
 				var newTop = noChangeY >= 0 ? noChangeY : (Math.abs(noChangeY) - self._img_show.crop_height);
 
-				// 允许框部分超出边界，不限制位置
+				// 限制在图片范围内
+				newLeft = Math.max(0, Math.min(newLeft, self._img_show.width - self._img_show.crop_width));
+				newTop = Math.max(0, Math.min(newTop, self._img_show.height - self._img_show.crop_height));
+				
+				// 如果调整大小后超出边界，调整大小
+				if (newLeft + self._img_show.crop_width > self._img_show.width) {
+					self._img_show.crop_width = self._img_show.width - newLeft;
+					self._img_show.crop_height = self._img_show.crop_width / self._option.crop_scale;
+				}
+				if (newTop + self._img_show.crop_height > self._img_show.height) {
+					self._img_show.crop_height = self._img_show.height - newTop;
+					self._img_show.crop_width = self._img_show.crop_height * self._option.crop_scale;
+				}
+
+				// 设置canvas大小和位置（直接设置style属性以覆盖CSS的!important）
 				self._$canvasUp.attr("width", self._img_show.crop_width);
 				self._$canvasUp.attr("height", self._img_show.crop_height);
-				self._$canvasUp.css({ 
-					left: newLeft + 'px', 
-					top: newTop + 'px'
-				});
+				var canvasElement = self._$canvasUp[0];
+				canvasElement.style.left = newLeft + 'px';
+				canvasElement.style.top = newTop + 'px';
 
 				// 绘制重叠部分
 				self.drawOverlap(newLeft, newTop, self._img_show.crop_width, self._img_show.crop_height);
