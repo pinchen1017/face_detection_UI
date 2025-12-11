@@ -20,6 +20,13 @@
     <div class="main-container">
         <!-- 標題區域 -->
         <header class="header-section">
+            <!-- 漢堡菜單按鈕（左上角） -->
+            <button class="hamburger-menu" id="hamburgerMenu" aria-label="打開菜單">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
             <h1 class="main-title">政治人物識別</h1>
             <p class="subtitle">上傳包含政治人物的圖片，即可識別出人物名稱</p>
             <div class="status-indicator" id="status">
@@ -30,7 +37,8 @@
 
         <!-- 標籤頁導航 -->
         <div class="tabs-container">
-            <div class="tabs-nav">
+            <!-- 標籤頁導航 -->
+            <div class="tabs-nav" id="tabsNav">
                 <button class="tab-button active" data-tab="face-recognition">
                     臉部辨識
                 </button>
@@ -38,6 +46,9 @@
                     大砲圖鑑
                 </button>
             </div>
+            
+            <!-- 移動端遮罩層（點擊後關閉菜單） -->
+            <div class="menu-overlay" id="menuOverlay"></div>
         </div>
 
         <!-- 臉部辨識標籤頁內容 -->
@@ -273,6 +284,41 @@
             min_height: 10
         });
 
+        // 漢堡菜單功能（移動端）
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const tabsNav = document.getElementById('tabsNav');
+        const menuOverlay = document.getElementById('menuOverlay');
+        
+        function toggleMenu() {
+            hamburgerMenu.classList.toggle('active');
+            tabsNav.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+            // 防止背景滾動
+            if (tabsNav.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+        
+        function closeMenu() {
+            hamburgerMenu.classList.remove('active');
+            tabsNav.classList.remove('active');
+            menuOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        if (hamburgerMenu) {
+            hamburgerMenu.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleMenu();
+            });
+        }
+        
+        if (menuOverlay) {
+            menuOverlay.addEventListener('click', closeMenu);
+        }
+        
         // 標籤頁切換功能
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', function() {
@@ -289,6 +335,11 @@
                 // 添加活動狀態到當前標籤
                 this.classList.add('active');
                 document.getElementById(targetTab + '-tab').classList.add('active');
+                
+                // 移動端：選擇標籤後關閉菜單
+                if (window.innerWidth <= 768) {
+                    closeMenu();
+                }
             });
         });
 
