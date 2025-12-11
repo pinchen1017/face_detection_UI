@@ -98,3 +98,58 @@ def detect_faces_api(image_path: str):
         })
     
     return {"faces": faces}
+
+def get_registered_faces_api():
+    """
+    獲取所有註冊的人物列表（名稱和圖片路徑）
+    用於大炮圖鑑功能
+    
+    返回格式：
+    {
+        "faces": [
+            {"name": "厲耿桂芳", "image_path": "images/register/厲耿桂芳.jpg"},
+            ...
+        ]
+    }
+    """
+    # 確保 Python 能夠找到 Machine-Learning---Face-Recognition 目錄下的 app 模組
+    ml_face_dir_str = str(ML_FACE_DIR)
+    if ml_face_dir_str not in sys.path:
+        sys.path.insert(0, ml_face_dir_str)
+    
+    import os
+    from pathlib import Path
+    
+    # 註冊圖片目錄
+    register_dir = ML_FACE_DIR / "images" / "register"
+    
+    # 如果目錄不存在，返回空列表
+    if not register_dir.exists():
+        return {"faces": []}
+    
+    # 獲取所有圖片文件
+    faces = []
+    image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+    
+    for file_path in register_dir.iterdir():
+        if file_path.is_file() and file_path.suffix.lower() in image_extensions:
+            # 文件名（不含擴展名）就是人物名稱
+            name = file_path.stem
+            
+            # 構建相對路徑（用於前端顯示）
+            # 前端需要通過 Flask 的靜態文件服務來訪問
+            relative_path = f"/static/registered_faces/{file_path.name}"
+            
+            # 同時提供絕對路徑（用於後端處理）
+            absolute_path = str(file_path)
+            
+            faces.append({
+                "name": name,
+                "image_path": relative_path,
+                "absolute_path": absolute_path
+            })
+    
+    # 按名稱排序
+    faces.sort(key=lambda x: x["name"])
+    
+    return {"faces": faces}

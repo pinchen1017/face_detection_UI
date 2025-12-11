@@ -616,3 +616,159 @@ body {
 .align_middle {
     text-align: center;
 }
+
+/* 標籤頁樣式 */
+.tabs-container {
+    margin-bottom: 2rem;
+    animation: fadeInUp 0.8s ease-out 0.1s both;
+}
+
+.tabs-nav {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    border-bottom: 2px solid #333333;
+    padding-bottom: 0.5rem;
+}
+
+.tab-button {
+    background: transparent;
+    border: none;
+    color: #999999;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab-button:hover {
+    color: #FF8C00;
+}
+
+.tab-button.active {
+    color: #FF8C00;
+    border-bottom-color: #FF8C00;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* 大砲圖鑑樣式 */
+.gallery-section {
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.gallery-container {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 12px;
+    padding: 2rem;
+    min-height: 400px;
+}
+
+.gallery-loading {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #999999;
+}
+
+.gallery-loading .loading-text {
+    font-size: 1.2rem;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+    padding: 1rem 0;
+}
+
+.gallery-item {
+    background: #0f0f0f;
+    border: 1px solid #333333;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gallery-item:hover {
+    transform: translateY(-5px);
+    border-color: #FF8C00;
+    box-shadow: 0 8px 20px rgba(255, 140, 0, 0.3);
+    background: #151515;
+}
+
+.gallery-item-image {
+    width: 100%;
+    max-width: 180px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #333333;
+}
+
+.gallery-item-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #FF8C00;
+    margin: 0;
+}
+
+.gallery-error {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #ff6b6b;
+}
+
+.gallery-error .error-text {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.gallery-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #999999;
+}
+
+.gallery-empty .empty-text {
+    font-size: 1.2rem;
+}
+
+/* 響應式設計 - 標籤頁 */
+@media (max-width: 768px) {
+    .tabs-nav {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .tab-button {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .gallery-item-image {
+        max-width: 140px;
+        height: 140px;
+    }
+}

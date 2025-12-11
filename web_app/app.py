@@ -61,6 +61,22 @@ def receive_img(request, target_dir, desired_filename=None):
 def index():
     return render_template("index.html")
 
+@app.route("/static/registered_faces/<filename>")
+def serve_registered_face(filename):
+    """
+    提供註冊人物圖片的靜態文件服務
+    """
+    from flask import send_from_directory
+    from pathlib import Path
+    
+    # 註冊圖片目錄
+    register_dir = Path(__file__).resolve().parents[1] / "Machine-Learning---Face-Recognition" / "images" / "register"
+    
+    if not register_dir.exists():
+        return "Directory not found", 404
+    
+    return send_from_directory(str(register_dir), filename)
+
 @app.route("/uploadForIdent", methods=['POST'])
 def submitPic():
     try:
@@ -115,6 +131,19 @@ def reportPic():
         return "success!"
     except Exception as e:
         return jsonify({"error": f"回報時發生錯誤: {str(e)}"}), 500
+
+@app.route("/getRegisteredFaces", methods=['GET'])
+def getRegisteredFaces():
+    """
+    獲取所有註冊的人物列表（名稱和圖片路徑）
+    用於大炮圖鑑功能
+    """
+    try:
+        from face_api import get_registered_faces_api
+        result = get_registered_faces_api()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"faces": [], "error": f"獲取註冊人物列表時發生錯誤: {str(e)}"}), 500
 
 # 處理 404 錯誤（主要是源映射文件）
 @app.errorhandler(404)
