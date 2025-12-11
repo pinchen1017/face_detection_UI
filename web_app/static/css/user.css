@@ -101,6 +101,23 @@ body {
     animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
+/* 上傳和範例圖片合併區域 */
+.upload-and-samples-section {
+    margin-bottom: 3rem;
+}
+
+.upload-and-samples-container {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 12px;
+    padding: 3rem;
+    transition: border-color 0.3s ease;
+}
+
+.upload-and-samples-container:hover {
+    border-color: #FF8C00;
+}
+
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -132,6 +149,10 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     background: #0f0f0f;
+    /* 確保在移動端可以點擊 */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    position: relative;
 }
 
 .upload-box:hover {
@@ -177,6 +198,11 @@ body {
     transition: all 0.3s ease;
     margin: 0.5rem 0;
     border: none;
+    /* 確保在移動端可以點擊 */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .upload-button:hover {
@@ -731,6 +757,102 @@ body {
     display: block;
 }
 
+/* 範例圖片區域樣式 */
+.sample-images-section {
+    margin-bottom: 3rem;
+}
+
+/* 在合併區域中的範例圖片容器樣式 */
+.upload-and-samples-container .sample-images-container {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 2rem 0 0 0;
+    margin-top: 2rem;
+    border-top: 1px solid #333333;
+}
+
+/* 在合併區域中的上傳框樣式調整 */
+.upload-and-samples-container .upload-box {
+    margin-bottom: 0;
+}
+
+/* 獨立的範例圖片區域（如果還需要） */
+.sample-images-container {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 12px;
+    padding: 2rem;
+}
+
+.sample-images-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.sample-images-loading {
+    text-align: center;
+    padding: 2rem;
+    color: #999999;
+}
+
+.sample-images-loading .loading-text {
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+.sample-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.sample-image-item {
+    position: relative;
+    background: #0f0f0f;
+    border: 2px solid #333333;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    aspect-ratio: 1;
+    /* 確保在移動端可以點擊 */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.sample-image-item:hover {
+    transform: translateY(-5px);
+    border-color: #FF8C00;
+    box-shadow: 0 8px 20px rgba(255, 140, 0, 0.3);
+    background: #151515;
+}
+
+.sample-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sample-images-error,
+.sample-images-empty {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #999999;
+}
+
+.sample-images-error .error-text,
+.sample-images-empty .empty-text {
+    font-size: 1.1rem;
+}
+
 /* 大砲圖鑑樣式 */
 .gallery-section {
     animation: fadeInUp 0.8s ease-out 0.2s both;
@@ -916,5 +1038,19 @@ body {
     /* 確保遮罩層在側邊欄下方但在其他內容上方 */
     .menu-overlay {
         z-index: 9999;
+    }
+    
+    /* 範例圖片區域響應式 */
+    .sample-images-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+    }
+    
+    .sample-images-container {
+        padding: 1.5rem;
+    }
+    
+    .sample-images-title {
+        font-size: 1.1rem;
     }
 }

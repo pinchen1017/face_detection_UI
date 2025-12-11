@@ -53,9 +53,10 @@
 
         <!-- 臉部辨識標籤頁內容 -->
         <div class="tab-content active" id="face-recognition-tab">
-        <!-- 上傳區域 -->
-        <section class="upload-section">
-            <div class="upload-container">
+        <!-- 上傳和範例圖片區域（合併） -->
+        <section class="upload-and-samples-section">
+            <div class="upload-and-samples-container">
+                <!-- 上傳區域（上方） -->
                 <div class="upload-box" id="uploadBox">
                     <div class="upload-text">
                         <p class="upload-title">拖拽上傳圖片</p>
@@ -64,14 +65,20 @@
                             點擊選擇檔案
                         </label>
                     </div>
-                    <input type="file" class="file-input" id="fileInput" accept="image/*" hidden>
+                    <input type="file" class="file-input" id="fileInput" accept="image/*" style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none;">
                     <p class="upload-hint">支援格式: JPG, PNG, WEBP (最大 10MB)</p>
                 </div>
                 
-                <div class="action-buttons">
-                    <button id="tryIt" class="btn-primary-action" disabled>
-                        自動識別
-                    </button>
+                <!-- 範例圖片區域（下方） -->
+                <div class="sample-images-container">
+                    <h3 class="sample-images-title">或選擇以下圖片進行識別</h3>
+                    <div class="sample-images-loading" id="sampleImagesLoading" style="display: none;">
+                        <span class="loading-spinner"></span>
+                        <p class="loading-text">載入圖片中...</p>
+                    </div>
+                    <div class="sample-images-grid" id="sampleImagesGrid">
+                        <!-- 範例圖片將在這裡動態載入 -->
+                    </div>
                 </div>
                 
                 <p class="error-message" id="errorMessage"></p>
@@ -91,6 +98,9 @@
             <div class="canvas-box"></div>
             
             <div class="manual-controls">
+                <button id="tryIt" class="btn-primary-action" disabled>
+                    自動識別
+                </button>
                 <button id="addToList" class="btn-secondary">
                     加入列表
                 </button>
@@ -283,6 +293,9 @@
             min_width: 10,
             min_height: 10
         });
+        
+        // 將 ZmCanvasCrop 實例保存到全局變量，以便在加載範例圖片時使用
+        window.zmCanvasCropInstance = c;
 
         // 漢堡菜單功能（移動端）
         const hamburgerMenu = document.getElementById('hamburgerMenu');
@@ -418,6 +431,139 @@
             if (galleryTab && !galleryTab.querySelector('.gallery-grid') && !galleryTab.querySelector('.gallery-error')) {
                 loadCharacterGallery();
             }
+        });
+
+        // 載入範例圖片列表
+        function loadSampleImages() {
+            const sampleImagesGrid = document.getElementById('sampleImagesGrid');
+            const sampleImagesLoading = document.getElementById('sampleImagesLoading');
+            
+            if (!sampleImagesGrid) return;
+            
+            // 顯示載入狀態
+            sampleImagesLoading.style.display = 'block';
+            sampleImagesGrid.innerHTML = '';
+            
+            $.get("/getInputImages", (data, status) => {
+                sampleImagesLoading.style.display = 'none';
+                
+                if (status === "success") {
+                    if (data.error) {
+                        sampleImagesGrid.innerHTML = `
+                            <div class="sample-images-error">
+                                <p class="error-text">載入失敗：${data.error}</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    if (!data.images || data.images.length === 0) {
+                        sampleImagesGrid.innerHTML = `
+                            <div class="sample-images-empty">
+                                <p class="empty-text">目前沒有範例圖片</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // 創建圖片網格
+                    data.images.forEach(image => {
+                        const imageItem = document.createElement('div');
+                        imageItem.className = 'sample-image-item';
+                        
+                        const imageElement = document.createElement('img');
+                        imageElement.src = image.image_path;
+                        imageElement.alt = image.name;
+                        imageElement.className = 'sample-image';
+                        imageElement.onerror = function() {
+                            this.src = '/static/images/placeholder.jpg';
+                        };
+                        
+                        // 點擊圖片時加載到 canvas（同時支持觸摸事件）
+                        function handleImageClick() {
+                            loadSampleImageToCanvas(image.image_path);
+                        }
+                        imageItem.addEventListener('click', handleImageClick);
+                        imageItem.addEventListener('touchend', function(e) {
+                            e.preventDefault();
+                            handleImageClick();
+                        });
+                        
+                        imageItem.appendChild(imageElement);
+                        sampleImagesGrid.appendChild(imageItem);
+                    });
+                } else {
+                    sampleImagesGrid.innerHTML = `
+                        <div class="sample-images-error">
+                            <p class="error-text">載入失敗，請稍後再試</p>
+                        </div>
+                    `;
+                }
+            }).fail((xhr, status, error) => {
+                sampleImagesLoading.style.display = 'none';
+                console.error('Sample images load failed:', error);
+                sampleImagesGrid.innerHTML = `
+                    <div class="sample-images-error">
+                        <p class="error-text">載入失敗：${error}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // 將範例圖片加載到 canvas
+        function loadSampleImageToCanvas(imagePath) {
+            const canvasInput = document.getElementById('canvasInput');
+            if (!canvasInput) {
+                alert('無法找到畫布元素！');
+                return;
+            }
+            
+            // 使用 utils 的 loadImageToCanvas 函數
+            // 注意：範例圖片不需要處理 EXIF，所以傳入 null
+            // 但需要等待圖片加載完成後再執行後續操作
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                // 設置 canvas 尺寸
+                canvasInput.width = img.width;
+                canvasInput.height = img.height;
+                
+                // 繪製圖片到 canvas
+                const ctx = canvasInput.getContext('2d');
+                ctx.clearRect(0, 0, canvasInput.width, canvasInput.height);
+                ctx.drawImage(img, 0, 0);
+                
+                // 顯示 canvas
+                canvasInput.hidden = false;
+                
+                // 啟用自動識別按鈕
+                const tryItButton = document.getElementById('tryIt');
+                if (tryItButton) {
+                    tryItButton.disabled = false;
+                }
+                
+                // 顯示手動選擇區域
+                const manualSection = document.querySelector('.manual-section');
+                if (manualSection) {
+                    manualSection.hidden = false;
+                }
+                
+                // 觸發 ZmCanvasCrop 的 drawCavDown 方法來初始化裁剪功能
+                // 這需要將圖片轉換為 data URL
+                const dataUrl = canvasInput.toDataURL('image/jpeg', 0.9);
+                if (window.zmCanvasCropInstance) {
+                    window.zmCanvasCropInstance.drawCavDown(dataUrl);
+                }
+            };
+            img.onerror = function() {
+                alert('載入圖片失敗，請稍後再試。');
+            };
+            img.src = imagePath;
+        }
+
+        // 頁面載入時載入範例圖片
+        $(document).ready(function() {
+            loadSampleImages();
         });
     </script>
 

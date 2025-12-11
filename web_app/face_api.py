@@ -153,3 +153,58 @@ def get_registered_faces_api():
     faces.sort(key=lambda x: x["name"])
     
     return {"faces": faces}
+
+def get_input_images_api():
+    """
+    獲取所有 input 目錄下的圖片列表
+    用於臉部辨識功能，讓用戶可以選擇現有圖片進行識別
+    
+    返回格式：
+    {
+        "images": [
+            {"name": "image1.jpg", "image_path": "/static/input_images/image1.jpg"},
+            ...
+        ]
+    }
+    """
+    # 確保 Python 能夠找到 Machine-Learning---Face-Recognition 目錄下的 app 模組
+    ml_face_dir_str = str(ML_FACE_DIR)
+    if ml_face_dir_str not in sys.path:
+        sys.path.insert(0, ml_face_dir_str)
+    
+    import os
+    from pathlib import Path
+    
+    # input 圖片目錄
+    input_dir = ML_FACE_DIR / "images" / "input"
+    
+    # 如果目錄不存在，返回空列表
+    if not input_dir.exists():
+        return {"images": []}
+    
+    # 獲取所有圖片文件
+    images = []
+    image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+    
+    for file_path in input_dir.iterdir():
+        if file_path.is_file() and file_path.suffix.lower() in image_extensions:
+            # 文件名
+            name = file_path.name
+            
+            # 構建相對路徑（用於前端顯示）
+            # 前端需要通過 Flask 的靜態文件服務來訪問
+            relative_path = f"/static/input_images/{file_path.name}"
+            
+            # 同時提供絕對路徑（用於後端處理）
+            absolute_path = str(file_path)
+            
+            images.append({
+                "name": name,
+                "image_path": relative_path,
+                "absolute_path": absolute_path
+            })
+    
+    # 按文件名排序
+    images.sort(key=lambda x: x["name"])
+    
+    return {"images": images}

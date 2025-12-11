@@ -145,6 +145,35 @@ def getRegisteredFaces():
     except Exception as e:
         return jsonify({"faces": [], "error": f"獲取註冊人物列表時發生錯誤: {str(e)}"}), 500
 
+@app.route("/getInputImages", methods=['GET'])
+def getInputImages():
+    """
+    獲取所有 input 目錄下的圖片列表
+    用於臉部辨識功能，讓用戶可以選擇現有圖片進行識別
+    """
+    try:
+        from face_api import get_input_images_api
+        result = get_input_images_api()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"images": [], "error": f"獲取圖片列表時發生錯誤: {str(e)}"}), 500
+
+@app.route("/static/input_images/<filename>")
+def serve_input_image(filename):
+    """
+    提供 input 目錄圖片的靜態文件服務
+    """
+    from flask import send_from_directory
+    from pathlib import Path
+    
+    # input 圖片目錄
+    input_dir = Path(__file__).resolve().parents[1] / "Machine-Learning---Face-Recognition" / "images" / "input"
+    
+    if not input_dir.exists():
+        return "Directory not found", 404
+    
+    return send_from_directory(str(input_dir), filename)
+
 # 處理 404 錯誤（主要是源映射文件）
 @app.errorhandler(404)
 def handle_404(e):
