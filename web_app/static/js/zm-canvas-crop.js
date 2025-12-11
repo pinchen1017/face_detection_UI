@@ -194,17 +194,23 @@ ZmCanvasCrop.prototype = {
 		self._ctxUp = self._$canvasUp[0].getContext('2d');
 		
 		// 确保canvas有正确的定位样式
-		if (!self._$canvasUp.css('position')) {
-			self._$canvasUp.css('position', 'absolute');
-		}
-		
-		// 设置初始位置（直接设置style属性）
+		// 橙色框应该相对于照片canvas定位，而不是灰色容器框
 		var canvasElement = self._$canvasUp[0];
 		canvasElement.style.position = 'absolute';
-		canvasElement.style.left = '0px';
-		canvasElement.style.top = '0px';
 		
-		// 绘制初始重叠部分
+		// 获取照片canvas的位置
+		var canvasDownRect = self._$canvasDown[0].getBoundingClientRect();
+		var boxRect = self._$box[0].getBoundingClientRect();
+		
+		// 计算相对于灰色容器框的位置（照片canvas在容器中的位置）
+		var canvasDownOffsetLeft = canvasDownRect.left - boxRect.left;
+		var canvasDownOffsetTop = canvasDownRect.top - boxRect.top;
+		
+		// 设置初始位置（相对于灰色容器框，但限制在照片范围内）
+		canvasElement.style.left = canvasDownOffsetLeft + 'px';
+		canvasElement.style.top = canvasDownOffsetTop + 'px';
+		
+		// 绘制初始重叠部分（位置是相对于照片canvas的，所以是0,0）
 		self.drawOverlap(0, 0, self._img_show.crop_width, self._img_show.crop_height);
 
 		self.upCanvasEvent();
@@ -214,11 +220,18 @@ ZmCanvasCrop.prototype = {
 	drawOverlap: function(canvasLeft, canvasTop, cropWidth, cropHeight) {
 		var self = this;
 		
+		// 获取底层canvas的实际显示尺寸（考虑CSS缩放）
+		var canvasDown = self._$canvasDown[0];
+		var canvasDownRect = canvasDown ? canvasDown.getBoundingClientRect() : null;
+		var canvasDownDisplayWidth = canvasDownRect ? canvasDownRect.width : self._img_show.width;
+		var canvasDownDisplayHeight = canvasDownRect ? canvasDownRect.height : self._img_show.height;
+		
 		// 计算实际裁剪区域（框与图片重叠的部分）
+		// 使用实际显示的canvas尺寸来限制边界
 		var cropLeft = Math.max(0, canvasLeft);
 		var cropTop = Math.max(0, canvasTop);
-		var cropRight = Math.min(self._img_show.width, canvasLeft + cropWidth);
-		var cropBottom = Math.min(self._img_show.height, canvasTop + cropHeight);
+		var cropRight = Math.min(canvasDownDisplayWidth, canvasLeft + cropWidth);
+		var cropBottom = Math.min(canvasDownDisplayHeight, canvasTop + cropHeight);
 		
 		var overlapWidth = cropRight - cropLeft;
 		var overlapHeight = cropBottom - cropTop;
@@ -228,11 +241,14 @@ ZmCanvasCrop.prototype = {
 		
 		// 如果框与图片有重叠部分，才绘制
 		if (overlapWidth > 0 && overlapHeight > 0) {
-			// 计算源图片中的位置和大小
-			var srcLeft = cropLeft / self._img_show.scale;
-			var srcTop = cropTop / self._img_show.scale;
-			var srcWidth = overlapWidth / self._img_show.scale;
-			var srcHeight = overlapHeight / self._img_show.scale;
+			// 计算实际缩放比例（使用实际显示的尺寸）
+			var actualScale = canvasDownDisplayWidth / self._img.width;
+			
+			// 计算源图片中的位置和大小（使用实际缩放比例）
+			var srcLeft = cropLeft / actualScale;
+			var srcTop = cropTop / actualScale;
+			var srcWidth = overlapWidth / actualScale;
+			var srcHeight = overlapHeight / actualScale;
 			
 			// 计算在canvas上的绘制位置（相对于框的位置）
 			var drawLeft = cropLeft - canvasLeft;
@@ -279,8 +295,11 @@ ZmCanvasCrop.prototype = {
 			var currentTop = parseFloat($(canv).css('top')) || 0;
 			
 			// 获取按下时相对于canvas的位置
+			// 使用照片canvas的位置作为参考，而不是灰色容器框
 			var canvasRect = canv.getBoundingClientRect();
-			var boxRect = self._$box[0].getBoundingClientRect();
+			var canvasDownRect = self._$canvasDown[0].getBoundingClientRect();
+			
+			// 计算相对于照片canvas的位置
 			var relativeOffset = {
 				x: clientX - canvasRect.left,
 				y: clientY - canvasRect.top
@@ -294,31 +313,46 @@ ZmCanvasCrop.prototype = {
 				
 				var newPos = countPosition(moveClientX, moveClientY);
 				
-				// 移动上层canvas（直接设置style属性以覆盖CSS的!important）
-				canv.style.left = newPos.left + 'px';
-				canv.style.top = newPos.top + 'px';
+				// 获取照片canvas和灰色容器框的位置
+				var canvasDownRect = self._$canvasDown[0].getBoundingClientRect();
+				var boxRect = self._$box[0].getBoundingClientRect();
+				
+				// 计算照片canvas相对于灰色容器框的偏移
+				var canvasDownOffsetLeft = canvasDownRect.left - boxRect.left;
+				var canvasDownOffsetTop = canvasDownRect.top - boxRect.top;
+				
+				// 移动上层canvas（位置是相对于灰色容器框的，需要加上照片canvas的偏移）
+				canv.style.left = (canvasDownOffsetLeft + newPos.left) + 'px';
+				canv.style.top = (canvasDownOffsetTop + newPos.top) + 'px';
 
-				// 绘制重叠部分
+				// 绘制重叠部分（newPos是相对于照片canvas的位置）
 				self.drawOverlap(newPos.left, newPos.top, self._img_show.crop_width, self._img_show.crop_height);
 
 				//设置缩放按钮位置
 				self.resizePosition();
 
 				function countPosition(clientX, clientY) {
-					// 重新获取box的位置（因为页面可能滚动）
-					var currentBoxRect = self._$box[0].getBoundingClientRect();
+					// 获取底层canvas（照片）的实际显示位置和尺寸
+					var canvasDown = self._$canvasDown[0];
+					var canvasDownRect = canvasDown.getBoundingClientRect();
 					
-					// 计算相对于父容器(.canvas-box)的位置
-					var mouseX = clientX - currentBoxRect.left;
-					var mouseY = clientY - currentBoxRect.top;
+					// 计算相对于照片canvas的位置（而不是相对于灰色容器框）
+					var mouseX = clientX - canvasDownRect.left;
+					var mouseY = clientY - canvasDownRect.top;
 					
 					// 计算新的canvas位置（位置减去相对偏移）
 					var left = mouseX - relativeOffset.x;
 					var top = mouseY - relativeOffset.y;
 					
-					// 限制在图片范围内
-					left = Math.max(0, Math.min(left, self._img_show.width - self._img_show.crop_width));
-					top = Math.max(0, Math.min(top, self._img_show.height - self._img_show.crop_height));
+					// 使用照片canvas的实际显示尺寸来限制边界
+					var canvasDownDisplayWidth = canvasDownRect.width;
+					var canvasDownDisplayHeight = canvasDownRect.height;
+					var maxLeft = Math.max(0, canvasDownDisplayWidth - self._img_show.crop_width);
+					var maxTop = Math.max(0, canvasDownDisplayHeight - self._img_show.crop_height);
+					
+					// 限制在照片范围内
+					left = Math.max(0, Math.min(left, maxLeft));
+					top = Math.max(0, Math.min(top, maxTop));
 					
 					return { left: left, top: top };
 				}
@@ -415,36 +449,68 @@ ZmCanvasCrop.prototype = {
 				var newLeft = noChangeX >= 0 ? noChangeX : (Math.abs(noChangeX) - self._img_show.crop_width);
 				var newTop = noChangeY >= 0 ? noChangeY : (Math.abs(noChangeY) - self._img_show.crop_height);
 
+				// 获取底层canvas的实际显示尺寸（考虑CSS缩放）
+				var canvasDown = self._$canvasDown[0];
+				var canvasDownRect = canvasDown.getBoundingClientRect();
+				var canvasDownDisplayWidth = canvasDownRect.width;
+				var canvasDownDisplayHeight = canvasDownRect.height;
+				
+				// 使用实际显示的canvas尺寸来限制边界
+				var maxLeft = Math.max(0, canvasDownDisplayWidth - self._img_show.crop_width);
+				var maxTop = Math.max(0, canvasDownDisplayHeight - self._img_show.crop_height);
+				
 				// 限制在图片范围内
-				newLeft = Math.max(0, Math.min(newLeft, self._img_show.width - self._img_show.crop_width));
-				newTop = Math.max(0, Math.min(newTop, self._img_show.height - self._img_show.crop_height));
+				newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+				newTop = Math.max(0, Math.min(newTop, maxTop));
 				
 				// 如果调整大小后超出边界，调整大小
-				if (newLeft + self._img_show.crop_width > self._img_show.width) {
-					self._img_show.crop_width = self._img_show.width - newLeft;
+				if (newLeft + self._img_show.crop_width > canvasDownDisplayWidth) {
+					self._img_show.crop_width = canvasDownDisplayWidth - newLeft;
 					self._img_show.crop_height = self._img_show.crop_width / self._option.crop_scale;
+					// 重新检查最小尺寸
+					if (self._img_show.crop_width < self._img_show.min_width) {
+						self._img_show.crop_width = self._img_show.min_width;
+						self._img_show.crop_height = self._img_show.crop_width / self._option.crop_scale;
+						newLeft = Math.max(0, canvasDownDisplayWidth - self._img_show.crop_width);
+					}
 				}
-				if (newTop + self._img_show.crop_height > self._img_show.height) {
-					self._img_show.crop_height = self._img_show.height - newTop;
+				if (newTop + self._img_show.crop_height > canvasDownDisplayHeight) {
+					self._img_show.crop_height = canvasDownDisplayHeight - newTop;
 					self._img_show.crop_width = self._img_show.crop_height * self._option.crop_scale;
+					// 重新检查最小尺寸
+					if (self._img_show.crop_height < self._img_show.min_height) {
+						self._img_show.crop_height = self._img_show.min_height;
+						self._img_show.crop_width = self._img_show.crop_height * self._option.crop_scale;
+						newTop = Math.max(0, canvasDownDisplayHeight - self._img_show.crop_height);
+					}
 				}
 
+				// 获取照片canvas和灰色容器框的位置
+				var canvasDownRect = self._$canvasDown[0].getBoundingClientRect();
+				var boxRect = self._$box[0].getBoundingClientRect();
+				
+				// 计算照片canvas相对于灰色容器框的偏移
+				var canvasDownOffsetLeft = canvasDownRect.left - boxRect.left;
+				var canvasDownOffsetTop = canvasDownRect.top - boxRect.top;
+				
 				// 设置canvas大小和位置（直接设置style属性以覆盖CSS的!important）
+				// newLeft和newTop是相对于照片canvas的位置，需要加上照片canvas的偏移
 				self._$canvasUp.attr("width", self._img_show.crop_width);
 				self._$canvasUp.attr("height", self._img_show.crop_height);
 				var canvasElement = self._$canvasUp[0];
-				canvasElement.style.left = newLeft + 'px';
-				canvasElement.style.top = newTop + 'px';
+				canvasElement.style.left = (canvasDownOffsetLeft + newLeft) + 'px';
+				canvasElement.style.top = (canvasDownOffsetTop + newTop) + 'px';
 
 				// 绘制重叠部分
 				self.drawOverlap(newLeft, newTop, self._img_show.crop_width, self._img_show.crop_height);
 
 				self.resizePosition();
 
-				function countPosition(clientX, clientY) {//在底层canvas的相对位置
-					var boxRect = self._$box[0].getBoundingClientRect();
-					var left = clientX - boxRect.left;
-					var top = clientY - boxRect.top;
+				function countPosition(clientX, clientY) {//在底层canvas（照片）的相对位置
+					// 使用照片canvas的位置，而不是灰色容器框
+					var canvasDownRect = self._$canvasDown[0].getBoundingClientRect();
+					var left = clientX - canvasDownRect.left;
+					var top = clientY - canvasDownRect.top;
 					return { left: left, top: top }
 				}
 			}
