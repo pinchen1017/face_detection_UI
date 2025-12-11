@@ -80,23 +80,32 @@ def serve_registered_face(filename):
 @app.route("/uploadForIdent", methods=['POST'])
 def submitPic():
     try:
+        print("[DEBUG] 收到 /uploadForIdent 請求")
         filename = receive_img(request, IDENT_DIR)
+        print(f"[DEBUG] 圖片已保存到: {filename}")
         
         # 檢查是否為錯誤訊息
         if isinstance(filename, str) and filename.startswith("An error occurred"):
             return jsonify({"results": [], "error": filename})
         
         # 使用新的 TF2 分類器推論
+        print("[DEBUG] 開始調用 web_api 處理圖片")
         result = web_api(filename)
+        print(f"[DEBUG] web_api 返回結果，keys: {list(result.keys())}")
+        print(f"[DEBUG] 是否包含 aligned_image: {'aligned_image' in result}")
         
         # 確保返回格式正確
         if not isinstance(result, dict) or "results" not in result:
             return jsonify({"results": [], "error": "伺服器返回格式錯誤"})
         
         # 必須 jsonify 才能回給前端
+        print("[DEBUG] 返回結果給前端")
         return jsonify(result)
     except Exception as e:
         # 捕獲所有異常，返回錯誤訊息
+        print(f"[ERROR] 處理圖片時發生錯誤: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"results": [], "error": f"處理圖片時發生錯誤: {str(e)}"})
 
 @app.route("/detectFaces", methods=['POST'])

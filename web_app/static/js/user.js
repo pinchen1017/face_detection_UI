@@ -123,9 +123,25 @@ function addToList(x, y, width, height, src_canvas) {
     reportButton.addEventListener('click', () => {
         let name = window.prompt("識別為了錯誤的人物？請輸入他/她正確的名稱，將上傳圖片和您輸入的標籤資訊。");
         if (name != null && name.trim() !== '') {
+            // 獲取圖片數據（支持 canvas 和 img）
+            let imageData;
+            if (canvas instanceof HTMLCanvasElement) {
+                imageData = canvas.toDataURL('image/jpeg', 0.85);
+            } else if (canvas instanceof HTMLImageElement) {
+                imageData = canvas.src; // img 元素直接使用 src
+            } else {
+                // 如果 canvas 被替換成 img，從 resultCard 中獲取
+                const imgElement = resultCard.querySelector('.result_pic');
+                if (imgElement && imgElement instanceof HTMLImageElement) {
+                    imageData = imgElement.src;
+                } else {
+                    imageData = canvas.toDataURL('image/jpeg', 0.85);
+                }
+            }
+            
             // 使用 JPEG 格式壓縮圖片
             $.post("/report", {
-                data: canvas.toDataURL('image/jpeg', 0.85),
+                data: imageData,
                 real_name: name
             }, (data, status) => {
                 if (status == "success") {

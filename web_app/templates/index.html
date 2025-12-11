@@ -208,12 +208,24 @@
                 
                 // 壓縮圖片以減少上傳大小（使用 JPEG 格式，質量 0.85）
                 // 真實人臉圖片通常較大，壓縮可以減少 413 錯誤
-                let imageData = upload_list[i].toDataURL('image/jpeg', 0.85);
+                // 支持 canvas 和 img 元素
+                let imageData;
+                if (upload_list[i] instanceof HTMLCanvasElement) {
+                    imageData = upload_list[i].toDataURL('image/jpeg', 0.85);
+                } else if (upload_list[i] instanceof HTMLImageElement) {
+                    imageData = upload_list[i].src; // img 元素直接使用 src
+                } else {
+                    imageData = upload_list[i].toDataURL('image/jpeg', 0.85);
+                }
                 $.post("/uploadForIdent", {
                     data: imageData
                 }, (data, status) => {
                     if (status == "success") {
                         try {
+                            console.log('=== 收到伺服器回應 ===');
+                            console.log('數據 keys:', Object.keys(data));
+                            console.log('是否有 aligned_image:', 'aligned_image' in data);
+                            
                             // 檢查是否有錯誤訊息
                             if (data.error) {
                                 resultText.innerHTML = `<span class="error-text">${data.error}</span>`;
@@ -230,6 +242,59 @@
                             
                             let top1 = data.results[0];
                             let confidencePercent = top1.prob * 100;
+                            
+                            // 如果有處理後的正臉圖片（旋轉和裁剪後的），用 <img> 標籤替換 canvas
+                            if (data.aligned_image) {
+                                console.log('✅ 收到處理後的正臉圖片，長度:', data.aligned_image.length);
+                                console.log('前50個字符:', data.aligned_image.substring(0, 50));
+                                
+                                // 使用 setTimeout 確保 DOM 已完全渲染
+                                setTimeout(() => {
+                                    const canvas = resultCard.querySelector('.result_pic');
+                                    console.log('查找 canvas，找到:', canvas);
+                                    console.log('元素類型:', canvas ? canvas.constructor.name : 'null');
+                                    console.log('是否為 canvas:', canvas instanceof HTMLCanvasElement);
+                                    
+                                    if (canvas) {
+                                        // 保存原始尺寸
+                                        const originalWidth = canvas.width || canvas.offsetWidth || 120;
+                                        const originalHeight = canvas.height || canvas.offsetHeight || 120;
+                                        
+                                        console.log('原始尺寸:', originalWidth, 'x', originalHeight);
+                                        
+                                        // 創建 img 元素
+                                        const img = document.createElement('img');
+                                        img.className = 'result_pic';
+                                        img.src = data.aligned_image;
+                                        img.style.width = originalWidth + 'px';
+                                        img.style.height = originalHeight + 'px';
+                                        img.style.objectFit = 'cover';
+                                        img.style.display = 'block';
+                                        
+                                        // 立即替換 canvas
+                                        try {
+                                            if (canvas.parentNode) {
+                                                canvas.parentNode.replaceChild(img, canvas);
+                                                console.log('✅ Canvas 已成功替換為 img 元素');
+                                                
+                                                // 驗證替換是否成功
+                                                const verify = resultCard.querySelector('.result_pic');
+                                                console.log('驗證：替換後的元素類型:', verify ? verify.constructor.name : 'null');
+                                            } else {
+                                                console.error('❌ Canvas 的 parentNode 不存在');
+                                            }
+                                        } catch (e) {
+                                            console.error('❌ 替換失敗:', e);
+                                        }
+                                    } else {
+                                        console.error('❌ 未找到 .result_pic 元素');
+                                        console.log('resultCard 內容:', resultCard.innerHTML.substring(0, 200));
+                                    }
+                                }, 50);
+                            } else {
+                                console.warn('❌ 未收到處理後的正臉圖片');
+                                console.log('完整的返回數據:', JSON.stringify(data).substring(0, 500));
+                            }
                             
                             // 顯示所有結果，不設閾值限制（原本是 65%）
                             // 即使相似度很低也會顯示結果
@@ -533,8 +598,8 @@
                 ctx.clearRect(0, 0, canvasInput.width, canvasInput.height);
                 ctx.drawImage(img, 0, 0);
                 
-                // 使用模板圖片時，不顯示 canvas（保持 hidden）
-                // canvasInput.hidden = false;  // 註釋掉，不顯示範例圖片區域的canvas
+                // 顯示 canvas
+                canvasInput.hidden = false;
                 
                 // 啟用自動識別按鈕
                 const tryItButton = document.getElementById('tryIt');
