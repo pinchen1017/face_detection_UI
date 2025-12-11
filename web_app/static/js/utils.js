@@ -48,16 +48,101 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         request.send();
     };
 
-    this.loadImageToCanvas = function(url, cavansId) {
+    this.loadImageToCanvas = function(url, cavansId, file) {
         let canvas = document.getElementById(cavansId);
         let ctx = canvas.getContext('2d');
         let img = new Image();
         img.crossOrigin = 'anonymous';
+        
+        // 讀取 EXIF 方向信息的函數
+        function getOrientation(file, callback) {
+            if (!file || typeof EXIF === 'undefined') {
+                callback(1); // 默認方向
+                return;
+            }
+            
+            EXIF.getData(file, function() {
+                let orientation = EXIF.getTag(this, "Orientation") || 1;
+                callback(orientation);
+            });
+        }
+        
+        // 根據 EXIF 方向信息繪製圖片
+        function drawImageWithOrientation(canvas, ctx, img, orientation) {
+            // 根據方向信息設置 canvas 大小
+            let width = img.width;
+            let height = img.height;
+            
+            // 如果方向是 90 度或 270 度，需要交換寬高
+            if (orientation === 6 || orientation === 8) {
+                canvas.width = height;
+                canvas.height = width;
+            } else {
+                canvas.width = width;
+                canvas.height = height;
+            }
+            
+            // 清除 canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 根據方向信息進行旋轉和翻轉
+            ctx.save();
+            
+            switch(orientation) {
+                case 2:
+                    // 水平翻轉
+                    ctx.translate(width, 0);
+                    ctx.scale(-1, 1);
+                    break;
+                case 3:
+                    // 旋轉 180 度
+                    ctx.translate(width, height);
+                    ctx.rotate(Math.PI);
+                    break;
+                case 4:
+                    // 垂直翻轉
+                    ctx.translate(0, height);
+                    ctx.scale(1, -1);
+                    break;
+                case 5:
+                    // 順時針 90 度 + 水平翻轉
+                    ctx.translate(height, 0);
+                    ctx.rotate(Math.PI / 2);
+                    ctx.scale(-1, 1);
+                    break;
+                case 6:
+                    // 順時針 90 度
+                    ctx.translate(height, 0);
+                    ctx.rotate(Math.PI / 2);
+                    break;
+                case 7:
+                    // 逆時針 90 度 + 水平翻轉
+                    ctx.translate(0, width);
+                    ctx.rotate(-Math.PI / 2);
+                    ctx.scale(-1, 1);
+                    break;
+                case 8:
+                    // 逆時針 90 度
+                    ctx.translate(0, width);
+                    ctx.rotate(-Math.PI / 2);
+                    break;
+                default:
+                    // 正常方向，不需要變換
+                    break;
+            }
+            
+            // 繪製圖片
+            ctx.drawImage(img, 0, 0);
+            ctx.restore();
+        }
+        
         img.onload = function() {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
+            // 先讀取 EXIF 方向信息，然後再繪製
+            getOrientation(file, function(orientation) {
+                drawImageWithOrientation(canvas, ctx, img, orientation);
+            });
         };
+        
         img.src = url;
     };
 
@@ -92,8 +177,9 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
         inputElement.addEventListener('change', (e) => {
             let files = e.target.files;
             if (files.length > 0) {
-                let imgUrl = URL.createObjectURL(files[0]);
-                self.loadImageToCanvas(imgUrl, canvasId);
+                let file = files[0];
+                let imgUrl = URL.createObjectURL(file);
+                self.loadImageToCanvas(imgUrl, canvasId, file);
             }
         }, false);
     };
