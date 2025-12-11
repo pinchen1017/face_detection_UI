@@ -150,12 +150,8 @@ ZmCanvasCrop.prototype = {
 			//载入上层canvas
 			self.addUpCanvas();
 			//绑定松开鼠标事件
-			$(document).on('mouseup', function () {//在外部松开
+			$(document).on('mouseup.crop', function () {//在外部松开
 				$(document).off('mousemove');
-				/*					$('.resize-point').off('mousedown');
-								self._$canvasUp.off('mousedown');
-								self.upCanvasEvent();
-								self.resizeEvent();*/
 			});
 		}
 
@@ -197,8 +193,16 @@ ZmCanvasCrop.prototype = {
 
 		self._ctxUp = self._$canvasUp[0].getContext('2d');
 		
-		// 设置初始位置
-		self._$canvasUp.css({ left: 0, top: 0 });
+		// 确保canvas有正确的定位样式
+		if (!self._$canvasUp.css('position')) {
+			self._$canvasUp.css('position', 'absolute');
+		}
+		
+		// 设置初始位置（直接设置style属性）
+		var canvasElement = self._$canvasUp[0];
+		canvasElement.style.position = 'absolute';
+		canvasElement.style.left = '0px';
+		canvasElement.style.top = '0px';
 		
 		// 绘制初始重叠部分
 		self.drawOverlap(0, 0, self._img_show.crop_width, self._img_show.crop_height);
@@ -257,18 +261,33 @@ ZmCanvasCrop.prototype = {
 	//绑定鼠标按下事件
 	upCanvasEvent: function () {
 		var self = this;
+		// 移除旧的事件监听器，避免重复绑定
+		self._$canvasUp.off('mousedown');
 		self._$canvasUp.on('mousedown', cavMouseDown);
 
 		function cavMouseDown(e) {
+			e.preventDefault(); // 防止默认行为
 			var canv = this;
 
-			//获取到按下时，鼠标和元素的相对位置,相对偏差
-			var relativeOffset = { x: e.clientX - $(canv).offset().left, y: e.clientY - $(canv).offset().top };
-			$(document).on('mousemove', function (e) {
+			// 获取当前canvas的位置（相对于父元素）
+			var currentLeft = parseFloat($(canv).css('left')) || 0;
+			var currentTop = parseFloat($(canv).css('top')) || 0;
+			
+			// 获取鼠标按下时相对于canvas的位置
+			var canvasRect = canv.getBoundingClientRect();
+			var boxRect = self._$box[0].getBoundingClientRect();
+			var relativeOffset = {
+				x: e.clientX - canvasRect.left,
+				y: e.clientY - canvasRect.top
+			};
+
+			$(document).on('mousemove.crop', function (e) {
+				e.preventDefault();
 				var newPos = countPosition();
 				
-				// 允许框部分超出图片边界，不限制位置
-				$(canv).css({ left: newPos.left, top: newPos.top });//移动上层canvas
+				// 移动上层canvas（直接设置style属性以覆盖CSS的!important）
+				canv.style.left = newPos.left + 'px';
+				canv.style.top = newPos.top + 'px';
 
 				// 绘制重叠部分
 				self.drawOverlap(newPos.left, newPos.top, self._img_show.crop_width, self._img_show.crop_height);
@@ -277,10 +296,25 @@ ZmCanvasCrop.prototype = {
 				self.resizePosition();
 
 				function countPosition() {
-					var left = (e.clientX - relativeOffset.x) - self._$canvasDown.offset().left;//还要减去父元素到左边窗口的距离
-					var top = (e.clientY - relativeOffset.y) - self._$canvasDown.offset().top;//还要减去父元素到左边窗口的距离
-					return { left: left, top: top }
+					// 重新获取box的位置（因为页面可能滚动）
+					var currentBoxRect = self._$box[0].getBoundingClientRect();
+					
+					// 计算鼠标相对于父容器(.canvas-box)的位置
+					var mouseX = e.clientX - currentBoxRect.left;
+					var mouseY = e.clientY - currentBoxRect.top;
+					
+					// 计算新的canvas位置（鼠标位置减去相对偏移）
+					var left = mouseX - relativeOffset.x;
+					var top = mouseY - relativeOffset.y;
+					
+					return { left: left, top: top };
 				}
+			});
+			
+			// 鼠标松开时移除事件监听器
+			$(document).on('mouseup.crop', function() {
+				$(document).off('mousemove.crop');
+				$(document).off('mouseup.crop');
 			});
 		}
 	},
@@ -326,9 +360,11 @@ ZmCanvasCrop.prototype = {
 			if (upTop >= pTop) noChangeY = -(upTop + self._img_show.crop_height);//为负在下
 			else noChangeY = upTop;
 
-			$(document).on('mousemove', function (e) {
+			$(document).on('mousemove.resize', function (e) {
+				e.preventDefault();
 				// 计算新的框大小
-				self._img_show.crop_width = Math.abs(Math.abs(noChangeX) - countPosition().left);
+				var mousePos = countPosition();
+				self._img_show.crop_width = Math.abs(Math.abs(noChangeX) - mousePos.left);
 				self._img_show.crop_height = self._img_show.crop_width / self._option.crop_scale;
 				
 				// 如果宽高小于限制
@@ -348,7 +384,10 @@ ZmCanvasCrop.prototype = {
 				// 允许框部分超出边界，不限制位置
 				self._$canvasUp.attr("width", self._img_show.crop_width);
 				self._$canvasUp.attr("height", self._img_show.crop_height);
-				self._$canvasUp.css({ left: newLeft, top: newTop });
+				self._$canvasUp.css({ 
+					left: newLeft + 'px', 
+					top: newTop + 'px'
+				});
 
 				// 绘制重叠部分
 				self.drawOverlap(newLeft, newTop, self._img_show.crop_width, self._img_show.crop_height);
@@ -356,11 +395,18 @@ ZmCanvasCrop.prototype = {
 				self.resizePosition();
 
 				function countPosition() {//鼠标在底层canvas的相对位置
-					var left = e.clientX - self._$canvasDown.offset().left;
-					var top = e.clientY - self._$canvasDown.offset().top;
+					var boxRect = self._$box[0].getBoundingClientRect();
+					var left = e.clientX - boxRect.left;
+					var top = e.clientY - boxRect.top;
 					return { left: left, top: top }
 				}
 
+			});
+			
+			// 鼠标松开时移除事件监听器
+			$(document).on('mouseup.resize', function() {
+				$(document).off('mousemove.resize');
+				$(document).off('mouseup.resize');
 			});
 
 		});
