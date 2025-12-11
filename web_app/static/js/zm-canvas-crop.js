@@ -258,32 +258,41 @@ ZmCanvasCrop.prototype = {
 		}
 	},
 
-	//绑定鼠标按下事件
+	//绑定鼠标按下事件（同时支持触摸事件）
 	upCanvasEvent: function () {
 		var self = this;
 		// 移除旧的事件监听器，避免重复绑定
-		self._$canvasUp.off('mousedown');
-		self._$canvasUp.on('mousedown', cavMouseDown);
+		self._$canvasUp.off('mousedown touchstart');
+		self._$canvasUp.on('mousedown touchstart', cavMouseDown);
 
 		function cavMouseDown(e) {
 			e.preventDefault(); // 防止默认行为
 			var canv = this;
+			
+			// 判断是触摸事件还是鼠标事件
+			var isTouch = e.type === 'touchstart' || (e.originalEvent && e.originalEvent.type === 'touchstart');
+			var clientX = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientX : e.touches[0].clientX) : e.clientX;
+			var clientY = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientY : e.touches[0].clientY) : e.clientY;
 
 			// 获取当前canvas的位置（相对于父元素）
 			var currentLeft = parseFloat($(canv).css('left')) || 0;
 			var currentTop = parseFloat($(canv).css('top')) || 0;
 			
-			// 获取鼠标按下时相对于canvas的位置
+			// 获取按下时相对于canvas的位置
 			var canvasRect = canv.getBoundingClientRect();
 			var boxRect = self._$box[0].getBoundingClientRect();
 			var relativeOffset = {
-				x: e.clientX - canvasRect.left,
-				y: e.clientY - canvasRect.top
+				x: clientX - canvasRect.left,
+				y: clientY - canvasRect.top
 			};
 
-			$(document).on('mousemove.crop', function (e) {
+			// 移动事件处理函数
+			function handleMove(e) {
 				e.preventDefault();
-				var newPos = countPosition();
+				var moveClientX = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientX : e.touches[0].clientX) : e.clientX;
+				var moveClientY = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientY : e.touches[0].clientY) : e.clientY;
+				
+				var newPos = countPosition(moveClientX, moveClientY);
 				
 				// 移动上层canvas（直接设置style属性以覆盖CSS的!important）
 				canv.style.left = newPos.left + 'px';
@@ -295,15 +304,15 @@ ZmCanvasCrop.prototype = {
 				//设置缩放按钮位置
 				self.resizePosition();
 
-				function countPosition() {
+				function countPosition(clientX, clientY) {
 					// 重新获取box的位置（因为页面可能滚动）
 					var currentBoxRect = self._$box[0].getBoundingClientRect();
 					
-					// 计算鼠标相对于父容器(.canvas-box)的位置
-					var mouseX = e.clientX - currentBoxRect.left;
-					var mouseY = e.clientY - currentBoxRect.top;
+					// 计算相对于父容器(.canvas-box)的位置
+					var mouseX = clientX - currentBoxRect.left;
+					var mouseY = clientY - currentBoxRect.top;
 					
-					// 计算新的canvas位置（鼠标位置减去相对偏移）
+					// 计算新的canvas位置（位置减去相对偏移）
 					var left = mouseX - relativeOffset.x;
 					var top = mouseY - relativeOffset.y;
 					
@@ -313,13 +322,23 @@ ZmCanvasCrop.prototype = {
 					
 					return { left: left, top: top };
 				}
-			});
+			}
 			
-			// 鼠标松开时移除事件监听器
-			$(document).on('mouseup.crop', function() {
-				$(document).off('mousemove.crop');
-				$(document).off('mouseup.crop');
-			});
+			// 结束事件处理函数
+			function handleEnd(e) {
+				e.preventDefault();
+				$(document).off(isTouch ? 'touchmove.crop' : 'mousemove.crop');
+				$(document).off(isTouch ? 'touchend.crop touchcancel.crop' : 'mouseup.crop');
+			}
+
+			// 绑定移动和结束事件
+			if (isTouch) {
+				$(document).on('touchmove.crop', handleMove);
+				$(document).on('touchend.crop touchcancel.crop', handleEnd);
+			} else {
+				$(document).on('mousemove.crop', handleMove);
+				$(document).on('mouseup.crop', handleEnd);
+			}
 		}
 	},
 
@@ -349,10 +368,17 @@ ZmCanvasCrop.prototype = {
 		self.resizeEvent();
 	},
 
-	//绑定方向按钮事件
+	//绑定方向按钮事件（同时支持触摸事件）
 	resizeEvent: function () {
 		var self = this;
-		$('.resize-point').on('mousedown', function () {
+		$('.resize-point').off('mousedown touchstart');
+		$('.resize-point').on('mousedown touchstart', function (e) {
+			e.preventDefault();
+			
+			// 判断是触摸事件还是鼠标事件
+			var isTouch = e.type === 'touchstart' || (e.originalEvent && e.originalEvent.type === 'touchstart');
+			var clientX = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientX : e.touches[0].clientX) : e.clientX;
+			var clientY = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientY : e.touches[0].clientY) : e.clientY;
 
 			var pLeft = $(this).position().left + self._resize_point.size / 2,
 				pTop = $(this).position().top + self._resize_point.size / 2;
@@ -364,10 +390,14 @@ ZmCanvasCrop.prototype = {
 			if (upTop >= pTop) noChangeY = -(upTop + self._img_show.crop_height);//为负在下
 			else noChangeY = upTop;
 
-			$(document).on('mousemove.resize', function (e) {
+			// 移动事件处理函数
+			function handleResizeMove(e) {
 				e.preventDefault();
+				var moveClientX = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientX : e.touches[0].clientX) : e.clientX;
+				var moveClientY = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientY : e.touches[0].clientY) : e.clientY;
+				
 				// 计算新的框大小
-				var mousePos = countPosition();
+				var mousePos = countPosition(moveClientX, moveClientY);
 				self._img_show.crop_width = Math.abs(Math.abs(noChangeX) - mousePos.left);
 				self._img_show.crop_height = self._img_show.crop_width / self._option.crop_scale;
 				
@@ -411,20 +441,29 @@ ZmCanvasCrop.prototype = {
 
 				self.resizePosition();
 
-				function countPosition() {//鼠标在底层canvas的相对位置
+				function countPosition(clientX, clientY) {//在底层canvas的相对位置
 					var boxRect = self._$box[0].getBoundingClientRect();
-					var left = e.clientX - boxRect.left;
-					var top = e.clientY - boxRect.top;
+					var left = clientX - boxRect.left;
+					var top = clientY - boxRect.top;
 					return { left: left, top: top }
 				}
-
-			});
+			}
 			
-			// 鼠标松开时移除事件监听器
-			$(document).on('mouseup.resize', function() {
-				$(document).off('mousemove.resize');
-				$(document).off('mouseup.resize');
-			});
+			// 结束事件处理函数
+			function handleResizeEnd(e) {
+				e.preventDefault();
+				$(document).off(isTouch ? 'touchmove.resize' : 'mousemove.resize');
+				$(document).off(isTouch ? 'touchend.resize touchcancel.resize' : 'mouseup.resize');
+			}
+
+			// 绑定移动和结束事件
+			if (isTouch) {
+				$(document).on('touchmove.resize', handleResizeMove);
+				$(document).on('touchend.resize touchcancel.resize', handleResizeEnd);
+			} else {
+				$(document).on('mousemove.resize', handleResizeMove);
+				$(document).on('mouseup.resize', handleResizeEnd);
+			}
 
 		});
 
