@@ -593,13 +593,13 @@
                 canvasInput.width = img.width;
                 canvasInput.height = img.height;
                 
-                // 繪製圖片到 canvas
+                // 繪製圖片到 canvas（用於識別，但不顯示）
                 const ctx = canvasInput.getContext('2d');
                 ctx.clearRect(0, 0, canvasInput.width, canvasInput.height);
                 ctx.drawImage(img, 0, 0);
                 
-                // 顯示 canvas
-                canvasInput.hidden = false;
+                // 隱藏第一張 canvas（範例圖片區域的 canvasInput），不顯示
+                canvasInput.hidden = true;
                 
                 // 啟用自動識別按鈕
                 const tryItButton = document.getElementById('tryIt');
@@ -614,7 +614,7 @@
                 }
                 
                 // 觸發 ZmCanvasCrop 的 drawCavDown 方法來初始化裁剪功能
-                // 這需要將圖片轉換為 data URL
+                // 這會在 canvas-box（第二張）中顯示圖片，用於手動裁剪
                 const dataUrl = canvasInput.toDataURL('image/jpeg', 0.9);
                 if (window.zmCanvasCropInstance) {
                     window.zmCanvasCropInstance.drawCavDown(dataUrl);
