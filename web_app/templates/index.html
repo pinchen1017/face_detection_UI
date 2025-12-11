@@ -82,7 +82,7 @@
                 </div>
                 
                 <p class="error-message" id="errorMessage"></p>
-                <!-- <canvas class="image_canvas" id="canvasInput" hidden></canvas> -->
+                <canvas class="image_canvas" id="canvasInput" hidden></canvas>
             </div>
         </section>
 
@@ -533,8 +533,8 @@
                 ctx.clearRect(0, 0, canvasInput.width, canvasInput.height);
                 ctx.drawImage(img, 0, 0);
                 
-                // 顯示 canvas
-                canvasInput.hidden = false;
+                // 使用模板圖片時，不顯示 canvas（保持 hidden）
+                // canvasInput.hidden = false;  // 註釋掉，不顯示範例圖片區域的canvas
                 
                 // 啟用自動識別按鈕
                 const tryItButton = document.getElementById('tryIt');
