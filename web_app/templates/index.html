@@ -65,7 +65,7 @@
                             點擊選擇檔案
                         </label>
                     </div>
-                    <input type="file" class="file-input" id="fileInput" accept="image/*" style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none;">
+                    <input type="file" class="file-input" id="fileInput" accept="image/*" hidden>
                     <p class="upload-hint">支援格式: JPG, PNG, WEBP (最大 10MB)</p>
                 </div>
                 
@@ -82,7 +82,7 @@
                 </div>
                 
                 <p class="error-message" id="errorMessage"></p>
-                <canvas class="image_canvas" id="canvasInput" hidden></canvas>
+                <!-- <canvas class="image_canvas" id="canvasInput" hidden></canvas> -->
             </div>
         </section>
 

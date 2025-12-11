@@ -40,7 +40,7 @@ function facedet() {
                 }
                 
                 if (!data.faces || data.faces.length === 0) {
-                    alert('未偵測到人臉，請確認圖片中包含清晰的人臉！');
+            alert('未偵測到人臉，請確認圖片中包含清晰的人臉！');
                     return;
                 }
                 

@@ -152,7 +152,6 @@ body {
     /* 確保在移動端可以點擊 */
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    position: relative;
 }
 
 .upload-box:hover {

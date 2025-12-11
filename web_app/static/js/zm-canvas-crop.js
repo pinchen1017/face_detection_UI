@@ -284,7 +284,7 @@ ZmCanvasCrop.prototype = {
 		function cavMouseDown(e) {
 			e.preventDefault(); // 防止默认行为
 			var canv = this;
-			
+
 			// 判断是触摸事件还是鼠标事件
 			var isTouch = e.type === 'touchstart' || (e.originalEvent && e.originalEvent.type === 'touchstart');
 			var clientX = isTouch ? (e.originalEvent ? e.originalEvent.touches[0].clientX : e.touches[0].clientX) : e.clientX;
