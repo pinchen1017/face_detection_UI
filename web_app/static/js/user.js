@@ -22,82 +22,44 @@ function facedet() {
             return;
         }
         
-        let src = cv.imread('canvasInput');
-        if (src.empty()) {
-            alert('無法讀取圖片，請重新上傳！');
-            return;
-        }
+        // 使用後端 MTCNN 檢測人臉（與 recognize_faces1.py 相同的檢測方法）
+        // 將 canvas 轉換為 base64 圖片
+        let imageDataUrl = canvasInput.toDataURL('image/jpeg', 0.9);
         
-        let src_canvas = document.getElementById('canvasInput');
-        let gray = new cv.Mat();
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        let faces = new cv.RectVector();
-        let faceCascade = new cv.CascadeClassifier();
-        console.log("Face Detection Initialization (Real Human Faces)");
-        faceCascade.load('haarcascade_frontalface_default.xml');
-        console.log("haarcascade_frontalface_default.xml loaded");
+        // 顯示載入狀態
+        console.log("使用 MTCNN 檢測人臉（後端檢測）...");
         
-        // detect faces - 優化參數以減少誤檢（非人臉區域）
-        // scaleFactor: 1.2 (每次縮放比例，較大值減少檢測層級，提高準確度)
-        // minNeighbors: 5 (最少鄰居數，越高越嚴格，減少誤檢)
-        // flags: 0 (使用默認標誌)
-        // minSize: 50x50 (最小人臉尺寸，過濾太小的誤檢)
-        // maxSize: 根據圖片大小動態設置，避免檢測到整個圖片
-        let minSize = new cv.Size(50, 50);
-        let maxSize = new cv.Size(Math.floor(gray.cols * 0.8), Math.floor(gray.rows * 0.8));
-        faceCascade.detectMultiScale(gray, faces, 1.2, 5, 0, minSize, maxSize);
-        console.log("face detected, count: " + faces.size());
-        
-        if (faces.size() === 0) {
-            alert('未偵測到人臉，請確認圖片中包含清晰的人臉！');
-        } else {
-            // 過濾誤檢：檢查長寬比和大小
-            let validFaces = [];
-            for (let i = 0; i < faces.size(); ++i) {
-                let face = faces.get(i);
-                let width = face.width;
-                let height = face.height;
-                
-                // 人臉通常接近正方形，長寬比應該在 0.6 到 1.5 之間
-                let aspectRatio = width / height;
-                
-                // 檢查區域大小是否合理（不能太小也不能太大）
-                let area = width * height;
-                let imageArea = gray.cols * gray.rows;
-                let areaRatio = area / imageArea;
-                
-                // 過濾條件（更嚴格）：
-                // 1. 長寬比在合理範圍內（0.7-1.3，更接近正方形）
-                // 2. 區域面積不能太小（至少佔圖片的 0.2%）
-                // 3. 區域面積不能太大（不超過圖片的 30%）
-                // 4. 寬度和高度都要大於 60 像素（過濾領帶等細長物體）
-                if (aspectRatio >= 0.7 && aspectRatio <= 1.3 && 
-                    areaRatio >= 0.002 && areaRatio <= 0.3 &&
-                    width >= 60 && height >= 60) {
-                    validFaces.push(face);
-                    console.log(`Valid face detected: ${width}x${height}, aspect ratio: ${aspectRatio.toFixed(2)}, area ratio: ${(areaRatio*100).toFixed(2)}%`);
-                } else {
-                    console.log(`Filtered out invalid detection: ${width}x${height}, aspect ratio: ${aspectRatio.toFixed(2)}, area ratio: ${(areaRatio*100).toFixed(2)}%`);
+        // 發送請求到後端進行人臉檢測
+        $.post("/detectFaces", {
+            data: imageDataUrl
+        }, (data, status) => {
+            if (status === "success") {
+                if (data.error) {
+                    alert('檢測人臉時發生錯誤：' + data.error);
+                    return;
                 }
-            }
-            
-            if (validFaces.length === 0) {
-                alert('未偵測到有效人臉，請確認圖片中包含清晰的人臉！');
+                
+                if (!data.faces || data.faces.length === 0) {
+                    alert('未偵測到人臉，請確認圖片中包含清晰的人臉！');
+                    return;
+                }
+                
+                console.log(`使用 MTCNN 檢測到 ${data.faces.length} 張人臉`);
+                
+                // 使用檢測到的人臉區域添加到列表
+                let src_canvas = document.getElementById('canvasInput');
+                for (let i = 0; i < data.faces.length; ++i) {
+                    let face = data.faces[i];
+                    console.log(`人臉 ${i + 1}: x=${face.x}, y=${face.y}, width=${face.width}, height=${face.height}, prob=${(face.prob * 100).toFixed(2)}%`);
+                    addToList(face.x, face.y, face.width, face.height, src_canvas);
+                }
             } else {
-                console.log(`Found ${validFaces.length} valid face(s) out of ${faces.size()} detection(s)`);
-                for (let i = 0; i < validFaces.length; ++i) {
-                    let face = validFaces[i];
-                    let width = face.width;
-                    let height = face.height;
-                    addToList(face.x, face.y, width, height, src_canvas);
-                }
+                alert('檢測人臉時發生錯誤，請稍後再試。');
             }
-        }
-        
-        src.delete(); 
-        gray.delete(); 
-        faceCascade.delete();
-        faces.delete();
+        }).fail((xhr, status, error) => {
+            console.error('Face detection request failed:', error);
+            alert('檢測人臉時發生錯誤：' + error);
+        });
     } catch (e) {
         console.error('Face detection error:', e);
         alert('人臉偵測時發生錯誤：' + e.message);

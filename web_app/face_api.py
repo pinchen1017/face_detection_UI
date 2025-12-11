@@ -45,3 +45,56 @@ def web_api(image_path: str):
     
     # recognize_image 已經返回正確格式，直接返回即可
     return results
+
+def detect_faces_api(image_path: str):
+    """
+    使用 MTCNN 檢測人臉，返回人臉區域坐標。
+    與 recognize_faces1.py 使用相同的檢測方法，確保準確性。
+    
+    返回格式：
+    {
+        "faces": [
+            {"x": 100, "y": 200, "width": 150, "height": 150, "prob": 0.98},
+            ...
+        ]
+    }
+    """
+    # 確保 Python 能夠找到 Machine-Learning---Face-Recognition 目錄下的 app 模組
+    ml_face_dir_str = str(ML_FACE_DIR)
+    if ml_face_dir_str not in sys.path:
+        sys.path.insert(0, ml_face_dir_str)
+    
+    from PIL import Image
+    from app.detector import FaceDetector
+    import numpy as np
+    
+    # 讀取圖片
+    try:
+        pil_image = Image.open(image_path).convert('RGB')
+    except Exception as e:
+        return {"faces": [], "error": f"無法讀取圖片: {str(e)}"}
+    
+    # 使用 MTCNN 檢測人臉（與 recognize_faces1.py 相同的檢測器）
+    detector = FaceDetector(device=None, keep_all=True, min_prob=0.95)
+    boxes, probs, landmarks = detector.detect(pil_image)
+    
+    if boxes is None or len(boxes) == 0:
+        return {"faces": []}
+    
+    # 轉換為前端需要的格式
+    faces = []
+    for i, box in enumerate(boxes):
+        x1, y1, x2, y2 = box
+        width = int(x2 - x1)
+        height = int(y2 - y1)
+        prob = float(probs[i]) if probs[i] is not None else 0.0
+        
+        faces.append({
+            "x": int(x1),
+            "y": int(y1),
+            "width": width,
+            "height": height,
+            "prob": prob
+        })
+    
+    return {"faces": faces}

@@ -83,6 +83,31 @@ def submitPic():
         # 捕獲所有異常，返回錯誤訊息
         return jsonify({"results": [], "error": f"處理圖片時發生錯誤: {str(e)}"})
 
+@app.route("/detectFaces", methods=['POST'])
+def detectFaces():
+    """
+    使用 MTCNN 檢測人臉，返回人臉區域坐標。
+    與 recognize_faces1.py 使用相同的檢測方法。
+    """
+    try:
+        filename = receive_img(request, IDENT_DIR)
+        
+        # 檢查是否為錯誤訊息
+        if isinstance(filename, str) and filename.startswith("An error occurred"):
+            return jsonify({"faces": [], "error": filename})
+        
+        # 使用 MTCNN 檢測人臉
+        from face_api import detect_faces_api
+        result = detect_faces_api(filename)
+        
+        # 確保返回格式正確
+        if not isinstance(result, dict) or "faces" not in result:
+            return jsonify({"faces": [], "error": "伺服器返回格式錯誤"})
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"faces": [], "error": f"檢測人臉時發生錯誤: {str(e)}"})
+
 @app.route("/report", methods=['POST'])
 def reportPic():
     try:

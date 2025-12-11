@@ -183,13 +183,8 @@
                             let top1 = data.results[0];
                             let confidencePercent = top1.prob * 100;
                             
-                            // 如果最高分數低於 65%，顯示提示訊息
-                            if (confidencePercent < 65) {
-                                resultText.innerHTML = '<span class="error-text">也許他還沒有在立法院出名 (◍ˊㅿˋ◍) </span>';
-                                resultCard.classList.remove('analyzing');
-                                return;
-                            }
-                            
+                            // 顯示所有結果，不設閾值限制（原本是 65%）
+                            // 即使相似度很低也會顯示結果
                             resultText.innerHTML = `
                                 <span class="character-name">${top1.label}</span>
                                 <span class="confidence-score">${confidencePercent.toFixed(1)}%</span>
