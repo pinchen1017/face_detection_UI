@@ -1,10 +1,18 @@
 # web_app/face_api.py
+# ============================================================
+# 功能說明：Flask 與機器學習模組之間的橋接 API
+# 作用：將 Flask 請求轉發給 recognize_faces.py 進行處理
+# ============================================================
+
 import os
 import sys
 from pathlib import Path
 import importlib.util
 
-# 取得專案根目錄，例如 13. ANIME-FACE-RECO...
+# ============================================================
+# Step 1: 設定專案路徑
+# ============================================================
+# 說明：取得專案根目錄和機器學習模組的路徑
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 # 指向 Machine-Learning---Face-Recognition/recognize_faces.py
@@ -14,16 +22,22 @@ RECOGNIZE_SCRIPT = ML_FACE_DIR / "recognize_faces.py"
 # 緩存模組，避免重複載入
 _ml_face_module = None
 
+# ============================================================
+# Step 2: 動態載入機器學習模組
+# ============================================================
+# 說明：由於資料夾名稱包含 "-"，無法直接 import，需要使用 importlib 動態載入
 def _load_ml_face_module():
     """延遲載入 recognize_faces.py 模組，避免循環導入"""
     global _ml_face_module
     if _ml_face_module is None:
-        # 確保 Python 能夠找到 Machine-Learning---Face-Recognition 目錄下的 app 模組
+        # Step 2.1: 將機器學習模組目錄加入 Python 路徑
+        # 說明：確保可以導入 app 目錄下的模組（如 app.pipeline, app.recognizer 等）
         ml_face_dir_str = str(ML_FACE_DIR)
         if ml_face_dir_str not in sys.path:
             sys.path.insert(0, ml_face_dir_str)
         
-        # 用 importlib 以「檔案路徑」匯入這支 script（因為資料夾名稱有 - 不能直接 import）
+        # Step 2.2: 使用 importlib 動態載入模組
+        # 說明：通過文件路徑載入模組，而不是通過模組名稱
         spec = importlib.util.spec_from_file_location(
             "ml_face_recognizer", RECOGNIZE_SCRIPT
         )
@@ -31,21 +45,31 @@ def _load_ml_face_module():
         spec.loader.exec_module(_ml_face_module)
     return _ml_face_module
 
+# ============================================================
+# Step 3: 人臉識別 API（主要接口）
+# ============================================================
+# 說明：Flask 調用此函數處理圖片識別請求
 def web_api(image_path: str):
     """
     給 Flask 用的統一接口：
     傳入圖片路徑，呼叫 recognize_image()，
     然後轉成前端 user.js 目前使用的 JSON 格式。
     """
-    # 延遲載入模組，避免循環導入
+    # Step 3.1: 載入機器學習模組（延遲載入，避免循環導入）
     ml_face_module = _load_ml_face_module()
-    # 呼叫你剛才在 recognize_faces.py 寫好的函式
-    # recognize_image 返回格式：{"results": [{"label": name, "prob": score}, ...]}
+    
+    # Step 3.2: 調用 recognize_faces.py 中的 recognize_image 函數
+    # 說明：這是核心識別邏輯，返回前 3 名最相似的人臉
+    # 返回格式：{"results": [{"label": name, "prob": score}, ...], "aligned_image": "..."}
     results = ml_face_module.recognize_image(image_path, top_k=3)
     
-    # recognize_image 已經返回正確格式，直接返回即可
+    # Step 3.3: 直接返回結果（格式已經符合前端需求）
     return results
 
+# ============================================================
+# Step 4: 人臉檢測 API（僅檢測位置，不識別）
+# ============================================================
+# 說明：用於前端"自動識別"功能，只檢測人臉位置，不進行身份識別
 def detect_faces_api(image_path: str):
     """
     使用 MTCNN 檢測人臉，返回人臉區域坐標。
@@ -59,7 +83,7 @@ def detect_faces_api(image_path: str):
         ]
     }
     """
-    # 確保 Python 能夠找到 Machine-Learning---Face-Recognition 目錄下的 app 模組
+    # Step 4.1: 確保 Python 能夠找到機器學習模組
     ml_face_dir_str = str(ML_FACE_DIR)
     if ml_face_dir_str not in sys.path:
         sys.path.insert(0, ml_face_dir_str)
@@ -68,7 +92,8 @@ def detect_faces_api(image_path: str):
     from app.detector import FaceDetector
     import numpy as np
     
-    # 讀取圖片
+    # Step 4.2: 讀取圖片並應用 EXIF 方向修正
+    # 說明：修正手機拍照時的旋轉問題
     try:
         from app.image_utils import apply_exif_orientation
         pil_image = Image.open(image_path).convert('RGB')
@@ -77,14 +102,18 @@ def detect_faces_api(image_path: str):
     except Exception as e:
         return {"faces": [], "error": f"無法讀取圖片: {str(e)}"}
     
-    # 使用 MTCNN 檢測人臉（與 recognize_faces1.py 相同的檢測器）
+    # Step 4.3: 使用 MTCNN 檢測人臉
+    # 說明：MTCNN 是多任務卷積神經網絡，用於檢測人臉位置和關鍵點
+    # keep_all=True: 檢測所有人臉
+    # min_prob=0.95: 只返回檢測概率大於 95% 的人臉
     detector = FaceDetector(device=None, keep_all=True, min_prob=0.95)
     boxes, probs, landmarks = detector.detect(pil_image)
     
     if boxes is None or len(boxes) == 0:
         return {"faces": []}
     
-    # 轉換為前端需要的格式
+    # Step 4.4: 轉換為前端需要的格式
+    # 說明：將檢測結果轉換為 JSON 格式，包含位置、大小、檢測概率
     faces = []
     for i, box in enumerate(boxes):
         x1, y1, x2, y2 = box
@@ -100,6 +129,7 @@ def detect_faces_api(image_path: str):
             "prob": prob
         })
     
+    # Step 4.5: 返回檢測結果
     return {"faces": faces}
 
 def get_registered_faces_api():
