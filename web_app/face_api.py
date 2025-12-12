@@ -70,7 +70,10 @@ def detect_faces_api(image_path: str):
     
     # 讀取圖片
     try:
+        from app.image_utils import apply_exif_orientation
         pil_image = Image.open(image_path).convert('RGB')
+        # 應用 EXIF 方向信息，確保圖片方向正確
+        pil_image = apply_exif_orientation(pil_image)
     except Exception as e:
         return {"faces": [], "error": f"無法讀取圖片: {str(e)}"}
     
